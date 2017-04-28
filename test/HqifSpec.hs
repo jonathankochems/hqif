@@ -14,9 +14,9 @@ spec =
       x <- someFunc
       x `shouldBe` ()
       (y,_y) <- someOtherFunc 42
-      _y `shouldBe` (show y) 
+      _y `shouldBe` show y 
       True `shouldBe` True
       x <- someFuncThree
       x `shouldBe` ()
       (y,_y) <- someOtherFuncFour 41
-      _y `shouldBe` (show y) 
+      _y `shouldBe` show y
