@@ -9,12 +9,11 @@
 --
 -- Description
 --   TODO: write description
-module Lib where
+module LibTwo where
 
-{-# NOINLINE someFunc #-}
-someFunc :: IO ()
-someFunc = do putStrLn "someFunc"
-              return ()
+import Lib
 
-someOtherFunc x = do putStrLn $ show x ++ " in someOtherFunc"
-                     return $ (x, show x)
+someFuncThree = someFunc 
+
+someOtherFuncFour :: Show a => a -> IO (a, String)
+someOtherFuncFour = someOtherFunc 
