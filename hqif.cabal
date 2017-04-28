@@ -36,15 +36,13 @@ test-suite hqif-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
+  other-modules:       HqifSpec
   build-depends:       base
                      , hspec >= 1.3
                      , QuickCheck >= 2.6
                      , hqif
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N 
   default-language:    Haskell2010
-
-source-repository head
-  type:     git
 
 -- Source repository information for development branch
 source-repository head

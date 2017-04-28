@@ -1,4 +1,4 @@
-module hqifSpec (main, spec) where
+module HqifSpec (main, spec) where
 
 import Test.Hspec
 
