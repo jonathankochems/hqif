@@ -48,7 +48,8 @@ script:
   - cd $(SDIST_FOLDER) && stack init --force && stack build --test --haddock --no-haddock-deps
 
 after_script: 
-  - codecov-haskell test-hqif --exclude-dir=test --display-report --print-response --dont-send > .tmp-report
+  - ln -sf $(stack path --local-hpc-root)/hqif dist/hpc/tix
+  - codecov-haskell hqif-test --exclude-dir=test --display-report --print-response --dont-send > .tmp-report
   - bash <(curl -s https://codecov.io/bash) -f .tmp-report
 
 notifications:
