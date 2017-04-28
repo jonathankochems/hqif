@@ -30,6 +30,7 @@ before_install:
 
 install:
   - stack update
+  - stack setup
   - stack install codecov-haskell
   - stack install --dependencies-only --test --bench
 
