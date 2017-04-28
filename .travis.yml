@@ -20,7 +20,7 @@ cache:
 
 # Download and unpack the stack executable
 before_install:
-  - export PATH=/opt/ghc/$$GHCVER/bin:$$PATH
+  - export PATH=/opt/ghc/$GHCVER/bin:$PATH
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'

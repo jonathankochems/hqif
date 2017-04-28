@@ -7,6 +7,6 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-  describe "someFunction" $$ 
-    it "should work fine" $$ 
+  describe "someFunction" $ 
+    it "should work fine" $ 
       True `shouldBe` False
