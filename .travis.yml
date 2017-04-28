@@ -23,11 +23,10 @@ cache:
 before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:$PATH
   - export PATH=$HOME/.local/bin:$PATH
-  - if [ -e $HOME/.local/bin ]; 
+  - if [ -e $HOME/.local/bin_fake ]; 
       then echo "stack already installed" && which stack && ls $HOME/.local/bin;
       else mkdir -p $HOME/.local/bin && travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C $HOME/.local/bin '*/stack';
     fi
-  - echo "completed before install"
 
 install:
   - stack update
