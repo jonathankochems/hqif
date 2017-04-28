@@ -38,7 +38,7 @@ script:
   - hlint . --ignore="Parse error"
   - export ROOT_DIR=$(pwd)
   - stack --no-terminal --skip-ghc-check build
-  - stack --no-terminal --skip-ghc-check test
+  - stack --no-terminal --skip-ghc-check test --coverage
   - stack --no-terminal --skip-ghc-check bench
   - stack --no-terminal --skip-ghc-check sdist
   - export DIST_DIR=$(stack path --dist-dir)

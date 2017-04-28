@@ -16,5 +16,5 @@ someFunc :: IO ()
 someFunc = do putStrLn "someFunc"
               return ()
 
-someOtherFunc x = do putStrLn $ show x ++ " in someOtherFunc"
-                     return $ (x, show x)
+someOtherFunc x = do putStrLn $ show x ++ "in someOtherFunc"
+                     return (x, show x)
