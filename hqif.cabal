@@ -5,15 +5,15 @@ name:                hqif
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
 version:             0.1.0.0
--- synopsis:         TODO: write synopsis
--- description:      TODO: write description
+synopsis:            TODO: write synopsis
+description:         TODO: write description
 homepage:            https://github.com/jonathankochems/hqif#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Jonathan Kochems
 maintainer:          jonathan.kochems@gmail.com
 copyright:           BSD3
---category:          TODO: pick category
+category:            TODO: pick category
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
