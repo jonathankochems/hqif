@@ -55,8 +55,8 @@ script:
   - export DIST_DIR=$(stack path --dist-dir)
   - export SDIST_TAR=$(find $DIST_DIR -name "*.tar.gz" | tail -1)
   - export SDIST_FOLDER=$(basename $DIST_TAR .tar.gz)
-  - tar xzf $(SDIST_TAR)
-  - pushd $(SDIST_FOLDER) && stack init --force && stack build --test --haddock --no-haddock-deps && popd
+  - tar xzvf $SDIST_TAR
+  - pushd $SDIST_FOLDER && stack init --force && stack build --test --haddock --no-haddock-deps && popd
 
 after_script:
 
