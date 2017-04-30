@@ -35,7 +35,8 @@ install:
       then echo "codecov-haskell already installed" && which codecov-haskell && ls $HOME/.local/bin;
       else mkdir -p $HOME/.local/bin 
         && git clone https://github.com/jonathankochems/codecov-haskell.git 
-        && pushd codecov-haskell 
+        && pushd codecov-haskell
+        && stack setup 
         && stack install && popd 
         && echo "codecov-haskell installed in" 
         && which codecov-haskell;
