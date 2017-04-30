@@ -31,7 +31,15 @@ before_install:
 install:
   - stack update
   - stack setup
-  - stack install codecov-haskell
+  - if [ -e $HOME/.local/bin/codecov-haskell ]; 
+      then echo "codecov-haskell already installed" && which codecov-haskell && ls $HOME/.local/bin;
+      else mkdir -p $HOME/.local/bin 
+        && git clone https://github.com/jonathankochems/codecov-haskell.git 
+        && pushd codecov-haskell 
+        && stack install && popd 
+        && echo "codecov-haskell installed in" 
+        && which codecov-haskell;
+    fi
   - stack install --dependencies-only --test --bench
 
 script:
