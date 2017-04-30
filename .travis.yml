@@ -31,7 +31,7 @@ before_install:
 install:
   - stack update
   - stack setup
-  - if [ -e $HOME/.local/bin/codecov-haskell ]; 
+  - if [ -e $HOME/.local/bin/codecov-haskell_fake ]; 
       then echo "codecov-haskell already installed" && which codecov-haskell && ls $HOME/.local/bin;
       else mkdir -p $HOME/.local/bin 
         && git clone https://github.com/jonathankochems/codecov-haskell.git 
@@ -57,10 +57,7 @@ script:
   - cd $(SDIST_FOLDER) && stack init --force && stack build --test --haddock --no-haddock-deps
 
 after_script:
-  - mkdir -p dist/hpc
-  - ln -sf $(stack path --local-hpc-root)/hqif dist/hpc/tix
-  - find dist/hpc/tix
-  - codecov-haskell hqif-test --exclude-dir=test --display-report --print-response --dont-send > .tmp-report
+  - codecov-haskell hqif-test --exclude-dir=test --display-report --print-response --dont-send --tix-dir=$(stack path --local-hpc-root)/hqif/ --mix-dir=$(stack path --dist-dir)/hpc/ > .tmp-report
   - bash <(curl -s https://codecov.io/bash) -f .tmp-report
 
 notifications:
