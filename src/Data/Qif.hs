@@ -3,7 +3,7 @@ module Data.Qif
     ,  ClearedStatus(..)
     ,  AccountType(..)
     ,  Transaction(..)
-    ,  parse_qif_file
+    ,  parseQifFile
     ,  displayQif
     ,  qifFromString 
     ,  displayTransaction 

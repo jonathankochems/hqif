@@ -11,8 +11,8 @@
 --
 module Bench where
 
--- HQif
-import HQif
+-- Qif
+import Data.Qif
 
 -- Data
 import Data.Char(isPrint)
@@ -30,17 +30,17 @@ import Test.QuickCheck
 import Test.QuickCheck.Property
 
 main = defaultMain [
-              bench "generateSerialiseDeserialse_bench" $ nfIO (generateSerialiseDeserialse_bench)
+              bench "generateSerialiseDeserialseBench" $ nfIO generateSerialiseDeserialseBench
          ]
 
-generateSerialiseDeserialse_bench = do
-    quickCheck . property $ forAll qif $ \qif -> (qifFromString $ qifToString qif) == qif
+generateSerialiseDeserialseBench = 
+    quickCheck . property $ forAll qif $ \qif -> qifFromString (displayQif qif) == qif
 
-date_generator :: Gen Date.Day 
-date_generator = do _d <- choose (1, 31)
-                    _m <- choose (1, 12)
-                    _y <- choose (2012, 2018)
-                    return $ Date.fromGregorian _y _m _d
+dateGenerator :: Gen Date.Day 
+dateGenerator = do _d <- choose (1, 31)
+                   _m <- choose (1, 12)
+                   _y <- choose (2012, 2018)
+                   return $ Date.fromGregorian _y _m _d
 
 transaction :: Gen Transaction
 transaction = do
@@ -57,7 +57,7 @@ transaction = do
    category    <- maybeGen c'  <$> suchThat (vector c) isText
    inv_act     <- maybeGen iv' <$> suchThat (vector iv) isText
    clr_sta     <- oneof $ map return [NotCleared, Cleared, Reconciled] 
-   date        <- date_generator
+   date        <- dateGenerator
    return Transaction{ _date = date, _payee = description, _memo = text, _amount = balance
                      , _category = category, _investmentAction = inv_act, _clearedStatus = clr_sta, _splits = [] }
   where maybeGen False _  = Nothing

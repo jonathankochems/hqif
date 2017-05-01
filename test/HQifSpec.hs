@@ -24,12 +24,12 @@ import Test.Hspec
 import Test.QuickCheck
 import Test.QuickCheck.Gen(oneof)
 
-spec = do
+spec = 
   describe "Data.Qif" $ do
     it "should satisfy that displaying and parsing yields the identity" $ do
       let qif = Qif {accountType = Bank, transactions = [Transaction {_date = Date.fromGregorian 2018 4 3, _payee = "r\227\245\&5\191!", _memo = ";\226S\224:+>aC1ik", _amount = -1037.0022, _category = Just "D:RlR", _investmentAction = Nothing, _clearedStatus = NotCleared, _splits = []}]}
           _parsedQif = qifFromString $ displayQif qif
-      (displayQif _parsedQif) `shouldBe` (displayQif qif)
+      displayQif _parsedQif `shouldBe` displayQif qif
       _parsedQif `shouldBe` qif
     it "should satisfy that displaying and parsing yields the identity" $ do
       let qif = Qif { accountType = Invoice
@@ -40,17 +40,17 @@ spec = do
                                      ]
                     }
           _parsedQif = qifFromString $ displayQif qif
-      (displayQif _parsedQif) `shouldBe` (displayQif qif)
+      displayQif _parsedQif `shouldBe` displayQif qif
       _parsedQif `shouldBe` qif
     it "should be able to take a qif, print it as a string, and parse it and result in the original qif" $
-      do property $ forAll qif $ \qif -> (qifFromString $ displayQif qif) == qif
+      property $ forAll qif $ \qif -> qifFromString (displayQif qif) == qif
 
 
-date_generator :: Gen Date.Day 
-date_generator = do _d <- choose (1, 31)
-                    _m <- choose (1, 12)
-                    _y <- choose (2012, 2018)
-                    return $ Date.fromGregorian _y _m _d
+dateGenerator :: Gen Date.Day 
+dateGenerator = do _d <- choose (1, 31)
+                   _m <- choose (1, 12)
+                   _y <- choose (2012, 2018)
+                   return $ Date.fromGregorian _y _m _d
 
 transaction :: Gen Transaction
 transaction = do
@@ -67,7 +67,7 @@ transaction = do
    category    <- maybeGen c'  <$> suchThat (vector c) isText
    inv_act     <- maybeGen iv' <$> suchThat (vector iv) isText
    clr_sta     <- oneof $ map return [NotCleared, Cleared, Reconciled] 
-   date        <- date_generator
+   date        <- dateGenerator
    return Transaction{ _date = date, _payee = description, _memo = text, _amount = balance
                      , _category = category, _investmentAction = inv_act, _clearedStatus = clr_sta
                      , _splits = [] }
