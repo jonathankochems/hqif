@@ -26,12 +26,12 @@ import Test.QuickCheck.Gen(oneof)
 
 spec = 
   describe "Data.Qif" $ do
-    it "should satisfy that displaying and parsing yields the identity" $ do
+    it "should satisfy that displaying and parsing yields the identity on one transaction" $ do
       let qif = Qif {accountType = Bank, transactions = [Transaction {_date = Date.fromGregorian 2018 4 3, _payee = "r\227\245\&5\191!", _memo = ";\226S\224:+>aC1ik", _amount = -1037.0022, _category = Just "D:RlR", _investmentAction = Nothing, _clearedStatus = NotCleared, _splits = []}]}
           _parsedQif = qifFromString $ displayQif qif
       displayQif _parsedQif `shouldBe` displayQif qif
       _parsedQif `shouldBe` qif
-    it "should satisfy that displaying and parsing yields the identity" $ do
+    it "should satisfy that displaying and parsing yields the identity on serveral transactions" $ do
       let qif = Qif { accountType = Invoice
                     , transactions = [Transaction {_date = Date.fromGregorian 2013 9 24, _payee = "\253y\247K\201\201", _memo = "\225+pA\239\&1k[", _amount = -3760.5286, _category = Just "\183j\253O`_yZ\245Xz+8\231e", _investmentAction = Nothing, _clearedStatus = Cleared, _splits = []}
                                      ,Transaction {_date = Date.fromGregorian 2014 8 17, _payee = "\198\\trrw}", _memo = "4\223},Z\243\&1]o=", _amount = -262.1128, _category = Nothing, _investmentAction = Just "g|6", _clearedStatus = Reconciled, _splits = []}
