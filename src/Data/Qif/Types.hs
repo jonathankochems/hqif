@@ -51,12 +51,12 @@ data Transaction = Transaction {  _date             :: Date.Day       -- ^ D Dat
                                 , _category         :: Maybe String   -- ^ L Category or Transfer and (optionally) Class. The literal values are those defined in the Quicken Category list. SubCategories can be indicated by a colon (":") followed by the subcategory literal. If the Quicken file uses Classes, this can be indicated by a slash ("/") followed by the class literal. For Investments, MiscIncX or MiscExpX actions, Category/class or transfer/class. (40 characters maximum) Example: LFuel:car
                                 , _investmentAction :: Maybe String   -- ^ N Investment Action (Buy, Sell, etc.). Example: NBuy
                                 , _clearedStatus    :: ClearedStatus  -- ^ C Cleared status. Values are blank (not cleared), "*" or "c" (cleared) and "X" or "R" (reconciled). Example: CR
-                                , _splits           :: [(Maybe String -- ^ S Split category. Same format as L (Categorization) field. (40 characters maximum)	Sgas from Esso
-                                                       , String       --   E Split memo—any text to go with this split item. Ework trips
-                                                       , Float )]     --   $ Amount for this split of the item. Same format as T field. $1,000.50
-                               } deriving (Eq, Show, Ord, Read)
-
-
+                                , _splits           :: [(Maybe String 
+                                                       , String       
+                                                       , Float )]     -- ^ S Split category. Same format as L (Categorization) field. (40 characters maximum)	Sgas from Esso 
+                                                                      --   E Split memo—any text to go with this split item. Ework trips
+                                                                      --   $ Amount for this split of the item. Same format as T field. $1,000.50
+                               } deriving (Eq, Show, Ord, Read)       
 -- lenses:
 -- date :: Lens' (Transaction) Date.Day
 date :: Functor f => (Date.Day -> f Date.Day) -> Transaction -> f Transaction
