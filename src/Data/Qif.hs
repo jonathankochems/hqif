@@ -7,6 +7,14 @@ module Data.Qif
     ,  displayQif
     ,  qifFromString 
     ,  displayTransaction 
+    ,  date    
+    ,  payee   
+    ,  memo    
+    ,  amount  
+    ,  category
+    ,  investmentAction
+    ,  clearedStatus 
+    ,  splits 
     )
     where
 
