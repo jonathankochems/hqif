@@ -126,6 +126,9 @@ categoryParser = do _ <- string "L"
                     category <- manyTill (noneOf ['\n','\r']) newlineOrEof
                     return $ L category
 
+
+--TODO(JAK): write test for Halifax Feb 2017 Interest transaction that gets parsed as 2.00 rather than 0.02
+
 -- | Parser for cleared status field in transaction
 clearedstatusParser :: GenParser Char st TransactionField
 clearedstatusParser = do _ <- string "C"
