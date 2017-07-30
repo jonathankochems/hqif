@@ -23,9 +23,11 @@ library
   exposed-modules:     Data.Qif
   other-modules:       Data.Qif.Types
                      , Data.Qif.Internal
+                     , Data.Qif.Sample
   build-depends:       base >= 4.7 && < 5
                      , time
                      , parsec
+                     , QuickCheck >= 2.9.2
   default-language:    Haskell2010
 
 Benchmark hqif-bench

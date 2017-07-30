@@ -21,7 +21,6 @@ import Text.ParserCombinators.Parsec
 import qualified Data.Time.Calendar as Date
 import Data.Time.Format(formatTime,defaultTimeLocale,parseTimeM)
 import Data.Maybe (fromMaybe)
-import Data.List(intercalate)
 import Data.Functor.Identity    
 
 -- Control
@@ -38,8 +37,8 @@ displayQif = unlines . go
 
 displayTransaction :: Transaction -> [String]
 displayTransaction trans = ["P" ++ p, "T" ++ a, "D" ++ d, "M" ++ _memo, "C" ++ clr] 
-                ++ maybe [] (\a -> ["N" ++ a]) act 
-                ++ maybe [] (\c -> ["L" ++ c]) cat
+                ++ maybe [] (\_a -> ["N" ++ _a]) act 
+                ++ maybe [] (\_c -> ["L" ++ _c]) cat
     where   p     = trans ^. payee
             a     = show $ trans ^. amount
             d     = displayDate $ trans ^. date
@@ -59,27 +58,33 @@ displayAccountType _type = "!Type:" ++ enum
                   OthL    -> "Oth L"  
                   Invoice -> "Invoice"
 
+displayClearedStatus :: ClearedStatus -> String
 displayClearedStatus NotCleared = ""
 displayClearedStatus Cleared    = "c"
 displayClearedStatus Reconciled = "R"
 
+displayDate :: Date.Day -> String
 displayDate = formatTime defaultTimeLocale "%d/%m/%Y"
 
 {-*********************************************
  * Lens helpers
  *********************************************-}
+(^.) :: t -> ((a -> Const a b1) -> t -> Const a1 b) -> a1
 s ^. l = getConst (l Const s)
 {-# INLINE (^.) #-}
+(.~) :: ((t -> Identity a1) -> a -> Identity c) -> a1 -> a -> c
 l .~ b = runIdentity . l (\_ -> Identity b)
 {-# INLINE (.~) #-}
 infixr 8 &
+(&) :: t1 -> (t1 -> t) -> t
 x & f = f x
 {-# INLINE (&) #-}
 
 {-*********************************************
  * helpers
  *********************************************-}
-mapOnBalance f x = x & amount .~ f (x ^. amount)
+applyToAmount :: (Float -> Float) -> Transaction -> Transaction
+applyToAmount f x = x & amount .~ f (x ^. amount)
 
 {- **************************************************
     Parsers for transaction fields
@@ -93,8 +98,8 @@ data TransactionField =   D String | P String | M String
 -- | Parser for date field in transaction
 dateParser :: GenParser Char st TransactionField
 dateParser = do _ <- string "D"
-                date <- manyTill (noneOf ['\n','\r']) newlineOrEof
-                return $ D date
+                _date <- manyTill (noneOf ['\n','\r']) newlineOrEof
+                return $ D _date
 
 -- | Parser for description field in transaction
 descriptionParser :: GenParser Char st TransactionField
@@ -123,8 +128,8 @@ investmentactionParser = do _ <- string "N"
 -- | Parser for investment action field in transaction
 categoryParser :: GenParser Char st TransactionField
 categoryParser = do _ <- string "L"
-                    category <- manyTill (noneOf ['\n','\r']) newlineOrEof
-                    return $ L category
+                    _category <- manyTill (noneOf ['\n','\r']) newlineOrEof
+                    return $ L _category
 
 
 --TODO(JAK): write test for Halifax Feb 2017 Interest transaction that gets parsed as 2.00 rather than 0.02
@@ -146,8 +151,8 @@ splitParser = do _ <- string "S"
                  return (split_cat, split_merchant, split_amount)
 
 splitsParser :: GenParser Char st TransactionField 
-splitsParser = do splits <- manyTill splitParser $ lookAhead (noneOf ['S'])
-                  return $ S splits
+splitsParser = do _splits <- manyTill splitParser $ lookAhead (noneOf ['S'])
+                  return $ S _splits
 
 -- | List of parsers for all transaction fields
 transactionfieldParsers :: [ GenParser Char st TransactionField ]
@@ -156,13 +161,16 @@ transactionfieldParsers = [ dateParser, descriptionParser, textParser
                           , clearedstatusParser, splitsParser 
                           ]
 
+parseDate :: String -> Date.Day
 parseDate s = fromMaybe (Date.fromGregorian 1990 1 1) $ parseTimeM True defaultTimeLocale "%d/%m/%Y" s
 
+parseClearedStatus :: String -> ClearedStatus
 parseClearedStatus ""  = NotCleared
 parseClearedStatus "*" = Cleared
 parseClearedStatus "c" = Cleared
 parseClearedStatus "X" = Reconciled
 parseClearedStatus "R" = Reconciled
+parseClearedStatus _s  = error $ "Unexpected cleared status: " ++ _s
 
 {- **************************************************
     transactions
@@ -215,20 +223,23 @@ typeParser = do _ <- string "!Type:"
                       "Invst"   -> Invst    
                       "Oth A"   -> OthA     
                       "Oth L"   -> OthL     
-                      "Invoice" -> Invoice  
+                      "Invoice" -> Invoice 
+                      _other    -> error $ "unexpected account type string:" ++ _other 
                 return _accountType 
 
 -- | Parser for a qif file  
 qifFileParser :: GenParser Char st Qif
 qifFileParser = do typeinfo     <- typeParser
-                   transactions <- transactionsParser
-                   return Qif{ accountType = typeinfo, transactions = transactions }
+                   _transactions <- transactionsParser
+                   return Qif{ accountType = typeinfo, transactions = _transactions }
 
 -- | obtain qif from string
+qifFromString :: String -> Qif
 qifFromString s = fromRight Qif{accountType = Bank, transactions = []} $ parse qifFileParser "(unknown)" s
 
 -- | IO Monad helper function: reads and parses qif file
 -- * if parsing successful returns qif data structure, otherwise returns "empty" qif
+parseQifFile :: FilePath -> IO Qif
 parseQifFile filename = do contents <- readFile filename
                            let parsed_qif = parse qifFileParser filename contents
                            if isRight parsed_qif
@@ -240,23 +251,29 @@ parseQifFile filename = do contents <- readFile filename
     Helper functions
 *************************************************** -}
 -- | test out parser on string
+testParser :: GenParser Char () a -> String -> Either ParseError a 
 testParser p = parse p "(unknown)"
 
 -- | parses newline but throws away '\n'
+newlineSkip :: GenParser Char st ()
 newlineSkip = do _ <- newline
                  return ()
 
 -- | skips newline but also succeeds at end-of-file
+newlineOrEof :: GenParser Char st ()
 newlineOrEof = choice [newlineSkip, eof]
 
 -- | quick and dirty Either exception handling with default value
-isRight (Right x) = True
+isRight :: Either a b -> Bool
+isRight (Right _) = True
 isRight _         = False
 
-fromRight d (Right x) = x
+fromRight :: b -> Either a b -> b
+fromRight _ (Right x) = x
 fromRight d _         = d
 
-fromLeft d (Left x) = x
+fromLeft :: a -> Either a b -> a
+fromLeft _ (Left x) = x
 fromLeft d _        = d
 
 

@@ -46,11 +46,11 @@ install:
 script:
   - hlint . --ignore="Parse error"
   - export ROOT_DIR=$(pwd)
-  - stack --no-terminal --skip-ghc-check build --coverage
-  - stack --no-terminal --skip-ghc-check test --coverage
+  - stack --no-terminal --skip-ghc-check build --coverage --pedantic --ghc-options='-Wall -Werror -Wunused-matches'
+  - stack --no-terminal --skip-ghc-check test --coverage --pedantic --ghc-options='-Wall -Werror -Wunused-matches'
   - codecov-haskell hqif-test --exclude-dir=test --display-report --print-response --dont-send --tix-dir=$(stack path --local-hpc-root)/hqif/ --mix-dir=$(stack path --dist-dir)/hpc/ > .tmp-report
   - bash <(curl -s https://codecov.io/bash) -f .tmp-report
-  - stack --no-terminal --skip-ghc-check bench
+  - stack --no-terminal --skip-ghc-check bench --pedantic --ghc-options='-Wall -Werror -Wunused-matches'
   - stack --no-terminal --skip-ghc-check sdist
   - export DIST_DIR=$(stack path --dist-dir)
   - export SDIST_TAR=$(find $DIST_DIR -name "*.tar.gz" | tail -1)

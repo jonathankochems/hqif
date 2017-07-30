@@ -16,13 +16,7 @@
 module Data.Qif.Types where
 
 -- Data
-import Data.Maybe (fromMaybe)
 import qualified Data.Time.Calendar as Date
-import Data.Time.Format(formatTime,defaultTimeLocale)
-import Data.Functor.Identity    
-
--- Control
-import Control.Applicative
 
 data Qif = Qif{ accountType  :: AccountType 
               , transactions :: [Transaction]}
