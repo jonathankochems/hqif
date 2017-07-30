@@ -9,22 +9,34 @@
 --
 -- Description
 --
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, FlexibleContexts, Rank2Types #-}
 module Data.Qif.Sample where
 
 -- Control
-import Control.Monad(forM)
+import Control.Monad(forM, when, void)
 import Control.Arrow(first, second)
 
 -- Data
 import qualified Data.Qif as HQif
-import Data.Maybe(isJust, fromMaybe)
-import Data.List(elemIndex, sort)
+import Data.Maybe(isJust, fromMaybe, fromJust)
+import Data.List(elemIndex, sort, init, inits, sort)
 import Data.Time.Calendar(fromGregorian)
+import qualified Data.ByteString.Char8 as ByteString
+import qualified Data.Trie as Trie
 
 -- Test
 import Test.QuickCheck
 
+import Text.Parsec ( parse, manyTill, anyChar, string
+                   , many, digit, letter, spaces
+                   , choice, try, eof, lookAhead
+                   , optionMaybe, Stream(..), SourcePos, unknownError
+                   )
+import Text.Parsec.String (GenParser)
+import qualified Text.Parsec as Parsec
+import Text.Parsec.Pos(updatePosString)
+import Text.Parsec.Error(setErrorMessage, newErrorMessage, newErrorUnknown, Message(..))
+import Unsafe.Coerce(unsafeCoerce)
 
 data Transaction = Transaction{
      transactionType :: Maybe String
@@ -80,6 +92,283 @@ printTransaction t = remainder t ++ d ++ t'
                _t <- transactionType t
                return $ ' ' : _t
 
+---------------------------------------------------------------------------------------------------
+-- combinators
+---------------------------------------------------------------------------------------------------
+-- | partial_string' ensures we consume at least one symbol if successful
+partialString' :: String -> GenParser Char st (String, Bool)
+partialString'= partialTokens' show updatePosString 
+
+newtype ParsecT s u m a
+    = ParsecT {unParser :: forall b .
+                 Parsec.State s u
+              -> (a -> Parsec.State s u -> Parsec.ParseError -> m b) -- consumed ok
+              -> (Parsec.ParseError -> m b)                          -- consumed err
+              -> (a -> Parsec.State s u -> Parsec.ParseError -> m b) -- empty ok
+              -> (Parsec.ParseError -> m b)                          -- empty err
+              -> m b
+             }
+myParsecT :: (forall b .
+                 Parsec.State s u
+              -> (a -> Parsec.State s u -> Parsec.ParseError -> m b) -- consumed ok
+              -> (Parsec.ParseError -> m b)                          -- consumed err
+              -> (a -> Parsec.State s u -> Parsec.ParseError -> m b) -- empty ok
+              -> (Parsec.ParseError -> m b)                          -- empty err
+              -> m b) -> Parsec.ParsecT s u m a
+myParsecT x = unsafeCoerce $ ParsecT x
+
+fromStrings :: [String] -> Trie.Trie ()
+fromStrings xs = Trie.fromList . map (first ByteString.pack) $ zip xs (repeat ())
+
+decompTrie :: Char -> Trie.Trie () -> (Maybe (), Trie.Trie ())
+decompTrie c = Trie.lookupBy (\x y -> (x,y)) (ByteString.pack [c])
+
+representative :: Trie.Trie b -> String
+representative t = head . map (ByteString.unpack . fst) $ Trie.toList t
+
+failed :: (Maybe t, Trie.Trie a) -> Bool
+failed (Nothing,t) = Trie.null t
+failed _           = False
+
+partial :: (Maybe t, Trie.Trie a) -> Bool
+partial (Nothing,t) | Trie.null t = False
+                    | otherwise   = True
+partial _           = False
+
+finished :: (Maybe (), Trie.Trie a) -> Bool
+finished (Just (),t) | Trie.null t = True
+                     | otherwise   = error "Trie contains prefixes, ambiguities are not handled."
+finished _         = False
+
+tokenTrie :: (Stream String m Char)
+       => ([String] -> String)       -- Pretty print a list of tokens
+       -> (SourcePos -> String -> SourcePos)
+       -> Trie.Trie ()          -- List of tokens to parse
+       -> Parsec.ParsecT String u m (String, Bool)
+{-# INLINE tokenTrie #-}
+tokenTrie showTokens nextposs trie
+  | Trie.null trie 
+      = myParsecT $ \s _ _ eok _ ->
+          eok ([],True) s $ unknownError s
+  | otherwise
+   = myParsecT $ \(Parsec.State input pos u) cok cerr _eok eerr -> 
+    let errEof      = errMsg showTokens (map (ByteString.unpack . fst) $ Trie.toList trie) "" pos
+        errExpect x = errMsg showTokens (map (ByteString.unpack . fst) $ Trie.toList trie) (showTokens [x]) pos 
+        walk ps trieRes@(_,_trie) rs 
+          | failed trieRes && length ps == 1 = eerr $ errExpect ps
+          | failed trieRes                   = cerr $ errExpect ps
+          | finished trieRes                 = ok ps rs
+          | otherwise                        = do
+          sr <- uncons rs
+          case sr of
+            Nothing     -> eerr errEof
+            Just (x :: Char,xs) -> walk (x:ps) (decompTrie x _trie) xs
+
+        ok ps rs = let pos' = nextposs pos $ reverse ps
+                       s'   = Parsec.State rs pos' u
+                   in cok ({-TODO(JAK):FIX needs to be full string-}reverse ps,True) s' (newErrorUnknown pos')
+    in do
+        sr <- uncons input
+        case sr of
+            Nothing     -> eerr errEof
+            Just (x,xs) -> walk [x] (decompTrie x trie) xs
+
+partialTokenTrie :: (Stream String m Char)
+       => ([String] -> String)       -- Pretty print a list of tokens
+       -> (SourcePos -> String -> SourcePos)
+       -> Trie.Trie ()          -- List of tokens to parse
+       -> Parsec.ParsecT String u m (String,Bool)
+{-# INLINE partialTokenTrie #-}
+partialTokenTrie showTokens nextposs trie
+ | Trie.null trie
+    = myParsecT $ \s _ _ eok _ ->
+          eok ([],True) s $ unknownError s
+ | otherwise
+    = myParsecT $ \(Parsec.State input pos u) cok cerr _eok eerr -> 
+    let errEof      = errMsg showTokens (map (ByteString.unpack . fst) $ Trie.toList trie) "" pos
+        errExpect x = errMsg showTokens (map (ByteString.unpack . fst) $ Trie.toList trie) (showTokens [x]) pos 
+        walk ps trieRes@(_,_trie) rs 
+          | failed trieRes && length ps == 1 = eerr $ errExpect ps
+          | failed trieRes                   = cerr $ errExpect ps
+          | finished trieRes                 = ok ps rs
+          | otherwise                        = do
+          sr <- uncons rs
+          case sr of
+            Nothing     -> pok (reverse ps) _trie rs
+            Just (x,xs) -> walk (x:ps) (decompTrie x _trie) xs
+
+        pok ps t rs = let pos' = nextposs pos ps
+                          s'   = Parsec.State rs pos' u
+                      in cok (ps ++ representative t, False) s' (newErrorUnknown pos')
+        ok ps rs = let pos' = nextposs pos $ reverse ps
+                       s'   = Parsec.State rs pos' u
+                   in cok (reverse ps,True) s' (newErrorUnknown pos')
+    in do
+        sr <- uncons input
+        case sr of
+            Nothing     -> eerr errEof
+            Just (x,xs) -> walk [x] (decompTrie x trie) xs
+
+partialTokens' :: (Stream s m t, Eq t)
+       => ([t] -> String)      -- Pretty print a list of tokens
+       -> (SourcePos -> [t] -> SourcePos)
+       -> [t]                  -- List of tokens to parse
+       -> Parsec.ParsecT s u m ([t],Bool)
+{-# INLINE partialTokens' #-}
+partialTokens' _ _ []
+    = myParsecT $ \s _ _ eok _ ->
+          eok ([],True) s $ unknownError s
+partialTokens' showTokens nextposs tts@(tok:toks)
+    = myParsecT $ \(Parsec.State input pos u) cok cerr _eok eerr -> 
+    let errEof      = errMsg showTokens tts "" pos
+        errExpect x = errMsg showTokens tts (showTokens [x]) pos
+        walk _ []     rs = ok rs
+        walk ps (t:ts) rs = do
+          sr <- uncons rs
+          case sr of
+            Nothing                 -> fok (reverse ps) rs
+            Just (x,xs) | t == x    -> walk (t:ps) ts xs
+                        | otherwise -> cerr $ errExpect x
+        fok ps rs = let pos' = nextposs pos ps
+                        s'   = Parsec.State rs pos' u
+                    in cok (tts,False) s' (newErrorUnknown pos')
+        ok rs = let pos' = nextposs pos tts
+                    s'   = Parsec.State rs pos' u
+                in cok (tts,True) s' (newErrorUnknown pos')
+    in do
+        sr <- uncons input
+        case sr of
+            Nothing         -> eerr errEof
+            Just (x,xs)
+                | tok == x  -> walk [x] toks xs
+                | otherwise -> eerr $ errExpect x
+
+{-# INLINE errMsg #-}
+errMsg :: (t -> String) -> t -> String -> SourcePos -> Parsec.ParseError
+errMsg showTokens etts xtts pos = setErrorMessage (Expect (showTokens etts))
+                                   (newErrorMessage (SysUnExpect xtts) pos)
+
+partialTokens :: (Stream s m t, Eq t)
+       => ([t] -> String)      -- Pretty print a list of tokens
+       -> (SourcePos -> [t] -> SourcePos)
+       -> [t]                  -- List of tokens to parse
+       -> Parsec.ParsecT s u m ([t],Bool)
+{-# INLINE partialTokens #-}
+partialTokens _ _ []
+    = myParsecT $ \s _ _ eok _ ->
+          eok ([],True) s $ unknownError s
+partialTokens showTokens nextposs tts@(tok:toks)
+    = myParsecT $ \(Parsec.State input pos u) cok cerr _eok eerr -> 
+    let errExpect x = errMsg showTokens tts (showTokens [x]) pos
+        walk _  []     rs = ok rs
+        walk ps (t:ts) rs = do
+          sr <- uncons rs
+          case sr of
+            Nothing                 -> pok (reverse ps) rs
+            Just (x,xs) | t == x    -> walk (t:ps) ts xs
+                        | otherwise -> cerr $ errExpect x
+
+        pok ps rs = let pos' = nextposs pos ps
+                        s'   = Parsec.State rs pos' u
+                in cok (tts,False) s' (newErrorUnknown pos')
+        ok rs = let pos' = nextposs pos tts
+                    s'   = Parsec.State rs pos' u
+                in cok (tts,True) s' (newErrorUnknown pos')
+    in do
+        sr <- uncons input
+        case sr of
+            Nothing         -> pok [] input 
+            Just (x,xs)
+                | tok == x  -> walk [x] toks xs
+                | otherwise -> eerr $ errExpect x
+
+
+-- | partial_string'' consideres eof as partial 
+partial_string'' :: String -> GenParser Char st (String, Bool)
+partial_string'' s = choice $ (try . fmap (\x -> (x,True)) $ string s) : ss 
+  where ss          = map _partial . reverse . init $ inits s
+        _partial s' = try $ string s' >> eof >> return (s,False)
+
+partialCharParser :: GenParser Char st Char -> GenParser Char st (Maybe Char)
+partialCharParser p = do atEof <- choice [const False <$> lookAhead p, const True <$> lookAhead eof]
+                         if atEof 
+                         then eof >> return Nothing
+                         else Just <$> p 
+
+
+partialString :: String -> GenParser Char st String
+partialString s = fst <$> partialString' s 
+
+partialStringEof :: String -> GenParser Char st String
+partialStringEof s = do 
+  (_s,_full) <- partialString' s
+  when _full eof
+  return s
+
+
+---------------------------------------------------------------------------------------------------
+-- parsers
+---------------------------------------------------------------------------------------------------
+parseDescription :: String -> Either Parsec.ParseError Transaction
+parseDescription = parse descriptionParser "(unknown)"
+
+descriptionParser :: GenParser Char st Transaction 
+descriptionParser = choice [try fdesc, pdesc] 
+  where fdesc = do merchant <- manyTill anyChar (try $ lookAhead $ do _ <- string " "
+                                                                      choice [ void dateParser
+                                                                             , void typeParser])
+                   _ <- string " "
+                   _date     <- optionMaybe . try $ dateParser
+                   if isJust _date && snd (fromJust _date) 
+                   then do
+                     let __date = fst $ fromJust _date
+                     spaces
+                     type_    <- typeParser
+                     return Transaction{ transactionType = type_
+                                       , remainder = merchant
+                                       , date      = __date
+                                       }
+                   else return Transaction{ transactionType = Nothing
+                                          , remainder = merchant
+                                          , date      = Nothing
+                                          }
+        pdesc = do merchant <- manyTill anyChar eof 
+                   return Transaction{ transactionType = Nothing
+                                     , remainder = merchant
+                                     , date      = Nothing
+                                     }
+
+dateParser :: GenParser Char st (Maybe (Int,String),Bool)
+dateParser = do (_,_full)     <- partialString' "ON "
+                if _full 
+                then do
+                  day_string <- many digit 
+                  if length day_string >= 2 -- shall we fail if >2?
+                  then do
+                    let day = read day_string
+                    (_,_full') <- partial_string'' " "
+                    if _full'
+                    then do 
+                      (x :: Maybe Char  ) <- partialCharParser letter
+                      (y :: Maybe Char  ) <- partialCharParser letter
+                      (z :: Maybe Char  ) <- partialCharParser letter
+                      let m = do _x <- x
+                                 _y <- y
+                                 _z <- z
+                                 return [_x,_y,_z]
+                      return (fmap (\month -> (day,month)) m, isJust m)
+                    else return (Nothing, False)
+                  else eof >> return (Nothing, False)
+                else return (Nothing, False)  
+
+typeParser :: GenParser Char st (Maybe String) 
+typeParser = choice [ try $ do 
+                       (x,_) <- partialTokenTrie show updatePosString transaction_type_trie
+                       eof
+                       return $ Just x
+                     , eof >> return Nothing ]
+  where transaction_type_trie = fromStrings transactionTypes
+---------------------------------------------------------------------------------------------------
 
 
 -- TODO(JAK): Move this into package hqif
