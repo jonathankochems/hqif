@@ -21,20 +21,17 @@ import qualified Data.Time.Calendar as Date
 -- Criterion
 import Criterion.Main
 
--- Control
-import Control.DeepSeq
-
 -- Test
-import Test.Hspec
 import Test.QuickCheck
-import Test.QuickCheck.Property
 
+main :: IO ()
 main = defaultMain [
               bench "generateSerialiseDeserialseBench" $ nfIO generateSerialiseDeserialseBench
          ]
 
+generateSerialiseDeserialseBench :: IO ()
 generateSerialiseDeserialseBench = 
-    quickCheck . property $ forAll qif $ \qif -> qifFromString (displayQif qif) == qif
+    quickCheck . property $ forAll qif $ \_qif -> qifFromString (displayQif _qif) == _qif
 
 dateGenerator :: Gen Date.Day 
 dateGenerator = do _d <- choose (1, 31)
@@ -50,22 +47,22 @@ transaction = do
    iv  <- choose(0,5)
    c'  <- choose(False,True)
    iv' <- choose(False,True)
-   s'  <- choose(False,True)
    description <- suchThat (vector j) isText
    text        <- suchThat (vector k) isText
    balance     <- choose(-5000.0,5000.0)
-   category    <- maybeGen c'  <$> suchThat (vector c) isText
+   _category   <- maybeGen c'  <$> suchThat (vector c) isText
    inv_act     <- maybeGen iv' <$> suchThat (vector iv) isText
    clr_sta     <- oneof $ map return [NotCleared, Cleared, Reconciled] 
-   date        <- dateGenerator
-   return Transaction{ _date = date, _payee = description, _memo = text, _amount = balance
-                     , _category = category, _investmentAction = inv_act, _clearedStatus = clr_sta, _splits = [] }
+   _date       <- dateGenerator
+   return Transaction{ _date = _date, _payee = description, _memo = text, _amount = balance
+                     , _category = _category, _investmentAction = inv_act, _clearedStatus = clr_sta, _splits = [] }
   where maybeGen False _  = Nothing
         maybeGen True  x  = Just x
 
 qif :: Gen Qif
 qif = do typeinfo  <- oneof $ map return [ Cash, Bank, CCard, Invst, OthA, OthL, Invoice ]
-         transactions <- listOf transaction
-         return Qif{ accountType = typeinfo, transactions = transactions }
+         _transactions <- listOf transaction
+         return Qif{ accountType = typeinfo, transactions = _transactions }
 
+isText :: String -> Bool
 isText = all isPrint

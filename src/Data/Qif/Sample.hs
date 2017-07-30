@@ -78,7 +78,7 @@ printTransaction t = remainder t ++ d ++ t'
               return $ " ON " ++ _d' ++ " " ++ _m
         t' = fromMaybe "" $ do
                _t <- transactionType t
-               return $ " " ++ _t
+               return $ ' ' : _t
 
 
 
