@@ -14,6 +14,7 @@
 module HQifSpec where
 
 import Data.Qif
+import qualified Data.Qif.Sample as Sample
 
 -- Data
 import Data.Char(isPrint)
@@ -25,7 +26,7 @@ import Test.QuickCheck
 import Test.QuickCheck.Gen(oneof)
 
 spec :: SpecWith ()
-spec = 
+spec = do 
   describe "Data.Qif" $ do
     it "should satisfy that displaying and parsing yields the identity on one transaction" $ do
       let _qif = Qif {accountType = Bank, transactions = [Transaction {_date = Date.fromGregorian 2018 4 3, _payee = "r\227\245\&5\191!", _memo = ";\226S\224:+>aC1ik", _amount = -1037.0022, _category = Just "D:RlR", _investmentAction = Nothing, _clearedStatus = NotCleared, _splits = []}]}
@@ -45,6 +46,10 @@ spec =
       _parsedQif `shouldBe` _qif
     it "should be able to take a qif, print it as a string, and parse it and result in the original qif" $
       property $ forAll qif $ \_qif -> qifFromString (displayQif _qif) == _qif
+  describe "Data.Qif.Sample" $ 
+    it "months" $ do
+      let jan = head Sample.months 
+      jan `shouldBe` "JAN"
 
 
 dateGenerator :: Gen Date.Day 

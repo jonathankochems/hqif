@@ -21,9 +21,9 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Data.Qif
+                     , Data.Qif.Sample
   other-modules:       Data.Qif.Types
                      , Data.Qif.Internal
-                     , Data.Qif.Sample
   build-depends:       base >= 4.7 && < 5
                      , time
                      , parsec
