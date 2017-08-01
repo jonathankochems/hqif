@@ -42,6 +42,7 @@ Benchmark hqif-bench
                  , QuickCheck >= 2.6
                  , time
                  , deepseq
+                 , parsec
                  , hqif
                  , criterion
 
