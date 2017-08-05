@@ -92,7 +92,7 @@ parse p = Parsec.parse p "(unknown)"
 partialStringBench :: Int -> IO ()
 partialStringBench n = do rs <- forM (zip [1..n] $ cycle months) $ \(_,m) -> do
                                   (!_rs) <- forM months $ \m' -> do 
-                                              let result = either (const False) ((==) m') $ parse (partialString m) m' 
+                                              let result = either (const False) (m' ==) $ parse (partialString m) m' 
                                               return result
                                   return $ or _rs
                           assert $ and rs
@@ -100,7 +100,7 @@ partialStringBench n = do rs <- forM (zip [1..n] $ cycle months) $ \(_,m) -> do
 
 partialTypesBench :: Int -> IO ()
 partialTypesBench n = do rs <- forM (zip [1..n] $ cycle transactionTypes) $ \(_,t) -> do
-                                 let result = either (const False) ((==) t) $ fromMaybe "" <$> parse (typeParser) t 
+                                 let result = either (const False) (t ==) $ fromMaybe "" <$> parse typeParser t 
                                  return result
                          assert $ and rs
                          return ()
@@ -108,16 +108,17 @@ partialTypesBench n = do rs <- forM (zip [1..n] $ cycle transactionTypes) $ \(_,
 stringBench :: Int -> IO ()
 stringBench n = do rs <- forM (zip [1..n] $ cycle months) $ \(_,m) -> do
                            (!_rs) <- forM months $ \m' -> do 
-                                       let result = either (const False) ((==) m') $ parse (Parsec.string m) m' 
+                                       let result = either (const False) (m' ==) $ parse (Parsec.string m) m' 
                                        return result
                            return $ or _rs
                    assert $ and rs
                    return ()
 
+{-# ANN baseBench "HLint: ignore Evaluate" #-}
 baseBench :: Int -> IO ()
 baseBench n = do rs <- forM (zip [1..n] $ cycle months) $ \(_,m) -> do
                          (!_rs) <- forM months $ \m' -> do 
-                                     let result = either (const False) ((==) m') $ const (Right m) m' 
+                                     let result = either (const False) (m' ==) $ const (Right m) m' 
                                      return result
                          return $ or _rs
                  assert $ and rs
